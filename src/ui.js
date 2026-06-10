@@ -41,7 +41,7 @@ export function createInterface(root, initialState, handlers) {
         </div>
         <div class="action-row">
           <button class="secondary-button" id="reset-sand" type="button">Reset Sand</button>
-          <button class="secondary-button" id="renderer-toggle" type="button">Use Fallback</button>
+          <button class="secondary-button" id="renderer-toggle" type="button">Use WebGL2</button>
         </div>
         <button class="mute-button" id="mute-button" type="button" aria-pressed="${!initialState.muted}">
           <span class="mute-icon" aria-hidden="true"></span>
@@ -148,8 +148,13 @@ export function createInterface(root, initialState, handlers) {
     }
   });
 
-  rendererToggle.addEventListener("click", () => {
-    handlers.onRendererToggle();
+  rendererToggle.addEventListener("click", async () => {
+    setControlsBusy(true);
+    try {
+      await handlers.onRendererToggle();
+    } finally {
+      setControlsBusy(false);
+    }
   });
 
   muteButton.addEventListener("click", async () => {
@@ -214,9 +219,9 @@ export function createInterface(root, initialState, handlers) {
   };
 
   function updateStatus(rendererMode, isFallback) {
-    rendererStatus.textContent = isFallback ? `${rendererMode} reduced fallback` : `${rendererMode} compute`;
+    rendererStatus.textContent = rendererMode;
     rendererStatus.classList.toggle("is-fallback", isFallback);
-    rendererToggle.textContent = isFallback ? "Use WebGPU" : "Use Fallback";
+    rendererToggle.textContent = isFallback ? "Use WebGPU" : "Use WebGL2";
   }
 
   function setControlsBusy(isBusy) {

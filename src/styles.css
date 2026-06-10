@@ -71,8 +71,8 @@ input {
   position: absolute;
   top: 18px;
   left: 18px;
-  min-width: 132px;
-  padding: 8px 12px;
+  width: fit-content;
+  padding: 7px 11px;
   border: 1px solid rgba(245, 177, 27, 0.3);
   border-radius: 999px;
   color: #f7d37b;

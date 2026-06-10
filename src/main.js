@@ -7,6 +7,8 @@ import { WebGLFallbackRenderer } from "./renderers/webglFallback.js";
 
 const DEFAULT_PARTICLE_COUNT = 150000;
 const FALLBACK_PARTICLE_CAP = 50000;
+const WEBGPU_RENDERER = "webgpu";
+const WEBGL_RENDERER = "webgl";
 
 const appState = {
   frequencyHz: MIN_FREQUENCY,
@@ -21,6 +23,7 @@ const audio = createAudioController(appState.frequencyHz);
 
 let activeRenderer = null;
 let ui = null;
+let requestedParticleCount = DEFAULT_PARTICLE_COUNT;
 
 startApp().catch((error) => {
   console.error(error);
@@ -43,6 +46,7 @@ async function startApp() {
     },
     onParticleCountChange: async (particleCount) => {
       const requestedCount = Number(particleCount);
+      requestedParticleCount = requestedCount;
       const actualCount = await activeRenderer.setParticleCount(requestedCount);
       appState.particleCount = actualCount ?? requestedCount;
       ui.updateParticleCount(appState.particleCount);
@@ -57,20 +61,13 @@ async function startApp() {
       appState.particleCount = actualCount ?? appState.particleCount;
       return appState.particleCount;
     },
-    onRendererToggle: () => {
-      const url = new URL(window.location.href);
-
-      if (appState.isFallback) {
-        url.searchParams.delete("renderer");
-      } else {
-        url.searchParams.set("renderer", "webgl");
-      }
-
-      window.location.href = url.toString();
+    onRendererToggle: async () => {
+      const nextRenderer = appState.isFallback ? WEBGPU_RENDERER : WEBGL_RENDERER;
+      await switchRenderer(nextRenderer);
     }
   });
 
-  activeRenderer = await createAndInitRenderer(ui.sceneRoot, appState);
+  activeRenderer = await createAndInitRenderer(ui.sceneRoot, appState, WEBGPU_RENDERER);
   activeRenderer.updateFrequency(appState.frequencyHz);
   ui.updateStatus(appState.rendererMode, appState.isFallback);
 
@@ -83,20 +80,33 @@ async function startApp() {
       activeRenderer.updateFrequency(frequencyHz);
     },
     async setParticleCount(particleCount) {
+      requestedParticleCount = Number(particleCount);
       const actualCount = await activeRenderer.setParticleCount(particleCount);
       appState.particleCount = actualCount ?? particleCount;
       ui.updateParticleCount(appState.particleCount);
+    },
+    async setRendererMode(rendererMode) {
+      await switchRenderer(rendererMode === WEBGL_RENDERER ? WEBGL_RENDERER : WEBGPU_RENDERER);
     }
   };
 }
 
-async function createAndInitRenderer(container, state) {
-  const forcedWebGL = new URLSearchParams(window.location.search).get("renderer") === "webgl";
+async function switchRenderer(rendererMode) {
+  activeRenderer?.dispose();
+  ui.sceneRoot.innerHTML = "";
 
-  if (!forcedWebGL && navigator.gpu) {
+  activeRenderer = await createAndInitRenderer(ui.sceneRoot, appState, rendererMode);
+  activeRenderer.updateFrequency(appState.frequencyHz);
+  ui.updateParticleCount(appState.particleCount);
+  ui.updateStatus(appState.rendererMode, appState.isFallback);
+}
+
+async function createAndInitRenderer(container, state, preferredRenderer) {
+  if (preferredRenderer === WEBGPU_RENDERER && navigator.gpu) {
     try {
       state.rendererMode = "WebGPU";
       state.isFallback = false;
+      state.particleCount = requestedParticleCount;
       const renderer = new WebGPUChladniRenderer(container, state);
       await renderer.init();
       return renderer;
@@ -106,9 +116,9 @@ async function createAndInitRenderer(container, state) {
     }
   }
 
-  state.rendererMode = "WebGL";
+  state.rendererMode = "WebGL2";
   state.isFallback = true;
-  state.particleCount = Math.min(state.particleCount, FALLBACK_PARTICLE_CAP);
+  state.particleCount = Math.min(requestedParticleCount, FALLBACK_PARTICLE_CAP);
   ui.updateParticleCount(state.particleCount);
   const fallbackRenderer = new WebGLFallbackRenderer(container, state);
   await fallbackRenderer.init();

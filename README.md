@@ -23,7 +23,7 @@ npm install
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173/` in a WebGPU-capable browser. To inspect the reduced fallback intentionally, open `http://127.0.0.1:5173/?renderer=webgl`.
+Open `http://127.0.0.1:5173/` in a WebGPU-capable browser. Use the in-app renderer switch to inspect the reduced fallback mode.
 
 Build for production:
 
@@ -37,6 +37,6 @@ npm run build
 - Click a preset Hz button to jump to a reference Chladni mode.
 - Use the particle slider to rebuild the simulation from 5k to 500k particles.
 - Click `Reset Sand` to restart the particle distribution.
-- Click `Use Fallback` or `Use WebGPU` to switch renderer mode.
+- Click `Use WebGL2` or `Use WebGPU` to switch renderer mode.
 - Click the tone button to unmute or mute the exact-Hz oscillator.
 - Use arrow keys on the dial for fine frequency changes, or Shift+Arrow for larger steps.
