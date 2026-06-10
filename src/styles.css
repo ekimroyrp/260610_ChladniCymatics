@@ -13,6 +13,7 @@
   --panel: #101212;
   --line: rgba(255, 255, 255, 0.12);
   --muted-text: rgba(255, 255, 255, 0.75);
+  --label-control-gap: 8px;
 }
 
 * {
@@ -104,7 +105,7 @@ input {
 
 .dial {
   position: relative;
-  width: min(100%, 286px);
+  width: 100%;
   aspect-ratio: 1;
   margin: 0 auto;
   touch-action: none;
@@ -201,18 +202,19 @@ input {
 }
 
 .section-heading {
-  margin-bottom: -6px;
+  margin-bottom: calc((16px - var(--label-control-gap)) * -1);
   color: var(--muted-text);
 }
 
 .particle-control {
   display: grid;
-  gap: 5px;
+  gap: 3px;
 }
 
 .particle-slider {
   width: 100%;
-  height: 30px;
+  height: 10px;
+  margin: 0;
   accent-color: var(--amber);
 }
 
@@ -345,7 +347,7 @@ input {
   }
 
   .dial {
-    width: min(100%, 340px);
+    width: 100%;
     margin-top: 0;
   }
 }

@@ -5,6 +5,7 @@ const MAX_PARTICLES = 500000;
 const DIAL_START_DEGREES = 140;
 const DIAL_SWEEP_DEGREES = 260;
 const DIAL_END_DEGREES = DIAL_START_DEGREES + DIAL_SWEEP_DEGREES;
+const DIAL_RADIUS = 142;
 
 export function createInterface(root, initialState, handlers) {
   root.innerHTML = `
@@ -17,8 +18,8 @@ export function createInterface(root, initialState, handlers) {
         <div class="dial" id="frequency-dial" role="slider" aria-label="Frequency" tabindex="0"
           aria-valuemin="${MIN_FREQUENCY}" aria-valuemax="${MAX_FREQUENCY}" aria-valuenow="${Math.round(initialState.frequencyHz)}">
           <svg class="dial-svg" viewBox="0 0 320 320" aria-hidden="true">
-            <circle class="dial-base" cx="160" cy="160" r="130"></circle>
-            <circle class="dial-arc" id="dial-arc" cx="160" cy="160" r="130"></circle>
+            <circle class="dial-base" cx="160" cy="160" r="${DIAL_RADIUS}"></circle>
+            <circle class="dial-arc" id="dial-arc" cx="160" cy="160" r="${DIAL_RADIUS}"></circle>
             <g id="dial-ticks"></g>
             <circle class="dial-knob" id="dial-knob" cx="160" cy="30" r="17"></circle>
           </svg>
@@ -184,8 +185,8 @@ export function createInterface(root, initialState, handlers) {
   function updateFrequencyVisuals(nextFrequency) {
     const progress = (nextFrequency - MIN_FREQUENCY) / (MAX_FREQUENCY - MIN_FREQUENCY);
     const angle = progressToAngle(progress);
-    const point = polarToCartesian(160, 160, 130, angle);
-    const circumference = 2 * Math.PI * 130;
+    const point = polarToCartesian(160, 160, DIAL_RADIUS, angle);
+    const circumference = 2 * Math.PI * DIAL_RADIUS;
     const visibleLength = circumference * DIAL_SWEEP_DEGREES / 360 * progress;
 
     arc.style.strokeDasharray = `${visibleLength} ${circumference}`;
@@ -242,9 +243,9 @@ function renderTicks(group) {
   for (const mark of labels) {
     const progress = (mark.frequency - MIN_FREQUENCY) / (MAX_FREQUENCY - MIN_FREQUENCY);
     const angle = progressToAngle(progress);
-    const outer = polarToCartesian(160, 160, 114, angle);
-    const inner = polarToCartesian(160, 160, 100, angle);
-    const label = polarToCartesian(160, 160, 78, angle);
+    const outer = polarToCartesian(160, 160, 124, angle);
+    const inner = polarToCartesian(160, 160, 109, angle);
+    const label = polarToCartesian(160, 160, 84, angle);
 
     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
     line.setAttribute("x1", inner.x);
