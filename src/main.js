@@ -46,10 +46,27 @@ async function startApp() {
       const actualCount = await activeRenderer.setParticleCount(requestedCount);
       appState.particleCount = actualCount ?? requestedCount;
       ui.updateParticleCount(appState.particleCount);
+      return appState.particleCount;
     },
     onMutedChange: async (muted) => {
       appState.muted = muted;
       await audio.setMuted(muted);
+    },
+    onResetParticles: async () => {
+      const actualCount = await activeRenderer.resetParticles();
+      appState.particleCount = actualCount ?? appState.particleCount;
+      return appState.particleCount;
+    },
+    onRendererToggle: () => {
+      const url = new URL(window.location.href);
+
+      if (appState.isFallback) {
+        url.searchParams.delete("renderer");
+      } else {
+        url.searchParams.set("renderer", "webgl");
+      }
+
+      window.location.href = url.toString();
     }
   });
 

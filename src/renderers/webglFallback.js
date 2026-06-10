@@ -19,6 +19,7 @@ export class WebGLFallbackRenderer {
     this.renderer = null;
     this.resizeObserver = null;
     this.animationFrame = 0;
+    this.seedBase = 0;
   }
 
   async init() {
@@ -83,10 +84,10 @@ export class WebGLFallbackRenderer {
 
     for (let index = 0; index < this.particleCount; index += 1) {
       const offset3 = index * 3;
-      const seed = seeded(index + 1);
-      const x = seeded(index * 7 + 11) * 2 - 1;
-      const y = seeded(index * 13 + 19) * 2 - 1;
-      const tone = 0.82 + seeded(index * 17 + 3) * 0.16;
+      const seed = seeded(index + 1 + this.seedBase);
+      const x = seeded(index * 7 + 11 + this.seedBase) * 2 - 1;
+      const y = seeded(index * 13 + 19 + this.seedBase) * 2 - 1;
+      const tone = 0.82 + seeded(index * 17 + 3 + this.seedBase) * 0.16;
 
       this.positions[offset3] = x * PLATE_HALF * 0.96;
       this.positions[offset3 + 1] = y * PLATE_HALF * 0.96;
@@ -121,6 +122,12 @@ export class WebGLFallbackRenderer {
 
   async setParticleCount(nextCount) {
     this.rebuildParticles(nextCount);
+    return this.particleCount;
+  }
+
+  async resetParticles() {
+    this.seedBase += 1009;
+    this.rebuildParticles(this.particleCount);
     return this.particleCount;
   }
 

@@ -1,4 +1,4 @@
-import { MAX_FREQUENCY, MIN_FREQUENCY } from "./patterns.js";
+import { MAX_FREQUENCY, MIN_FREQUENCY, PATTERN_MODES } from "./patterns.js";
 
 const MIN_PARTICLES = 5000;
 const MAX_PARTICLES = 500000;
@@ -29,11 +29,18 @@ export function createInterface(root, initialState, handlers) {
             <span>Hz</span>
           </div>
         </div>
+        <div class="preset-strip" id="preset-strip" aria-label="Frequency presets">
+          ${PATTERN_MODES.map((mode) => `<button class="preset-button" type="button" data-frequency="${mode.frequency}">${mode.frequency}</button>`).join("")}
+        </div>
         <div class="control-row">
           <label for="particle-count">Particles</label>
           <output id="particle-count-output">${formatParticleCount(initialState.particleCount)}</output>
         </div>
         <input id="particle-count" class="particle-slider" type="range" min="${MIN_PARTICLES}" max="${MAX_PARTICLES}" step="5000" value="${initialState.particleCount}" />
+        <div class="action-row">
+          <button class="secondary-button" id="reset-sand" type="button">Reset Sand</button>
+          <button class="secondary-button" id="renderer-toggle" type="button">Use Fallback</button>
+        </div>
         <button class="mute-button" id="mute-button" type="button" aria-pressed="${!initialState.muted}">
           <span class="mute-icon" aria-hidden="true"></span>
           <span id="mute-label">${initialState.muted ? "Unmute Tone" : "Mute Tone"}</span>
@@ -51,6 +58,9 @@ export function createInterface(root, initialState, handlers) {
   const centerValue = root.querySelector("#dial-center-frequency");
   const particleSlider = root.querySelector("#particle-count");
   const particleOutput = root.querySelector("#particle-count-output");
+  const presetStrip = root.querySelector("#preset-strip");
+  const resetSandButton = root.querySelector("#reset-sand");
+  const rendererToggle = root.querySelector("#renderer-toggle");
   const muteButton = root.querySelector("#mute-button");
   const muteLabel = root.querySelector("#mute-label");
   const rendererStatus = root.querySelector("#renderer-status");
@@ -102,9 +112,43 @@ export function createInterface(root, initialState, handlers) {
     particleOutput.textContent = formatParticleCount(count);
   });
 
-  particleSlider.addEventListener("change", () => {
+  particleSlider.addEventListener("change", async () => {
     const count = Number(particleSlider.value);
-    handlers.onParticleCountChange(count);
+    setControlsBusy(true);
+    try {
+      const actualCount = await handlers.onParticleCountChange(count);
+      if (actualCount) {
+        particleSlider.value = actualCount;
+        particleOutput.textContent = formatParticleCount(actualCount);
+      }
+    } finally {
+      setControlsBusy(false);
+    }
+  });
+
+  presetStrip.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-frequency]");
+    if (!button) return;
+
+    const nextFrequency = Number(button.dataset.frequency);
+    setFrequency(nextFrequency, true);
+  });
+
+  resetSandButton.addEventListener("click", async () => {
+    setControlsBusy(true);
+    try {
+      const actualCount = await handlers.onResetParticles();
+      if (actualCount) {
+        particleSlider.value = actualCount;
+        particleOutput.textContent = formatParticleCount(actualCount);
+      }
+    } finally {
+      setControlsBusy(false);
+    }
+  });
+
+  rendererToggle.addEventListener("click", () => {
+    handlers.onRendererToggle();
   });
 
   muteButton.addEventListener("click", async () => {
@@ -171,6 +215,16 @@ export function createInterface(root, initialState, handlers) {
   function updateStatus(rendererMode, isFallback) {
     rendererStatus.textContent = isFallback ? `${rendererMode} reduced fallback` : `${rendererMode} compute`;
     rendererStatus.classList.toggle("is-fallback", isFallback);
+    rendererToggle.textContent = isFallback ? "Use WebGPU" : "Use Fallback";
+  }
+
+  function setControlsBusy(isBusy) {
+    particleSlider.disabled = isBusy;
+    resetSandButton.disabled = isBusy;
+    rendererToggle.disabled = isBusy;
+    presetStrip.querySelectorAll("button").forEach((button) => {
+      button.disabled = isBusy;
+    });
   }
 }
 

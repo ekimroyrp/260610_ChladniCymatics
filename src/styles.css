@@ -91,13 +91,14 @@ input {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 22px;
+  gap: 16px;
   min-width: 0;
   height: 100%;
-  padding: clamp(20px, 4vw, 42px);
+  padding: clamp(18px, 3vw, 32px);
   border-left: 1px solid var(--line);
   background: rgba(12, 13, 13, 0.88);
   box-shadow: -20px 0 60px rgba(0, 0, 0, 0.24);
+  overflow: hidden;
 }
 
 .frequency-readout {
@@ -111,7 +112,7 @@ input {
 
 .frequency-readout strong {
   color: #fff7df;
-  font-size: 48px;
+  font-size: 42px;
   font-weight: 500;
   line-height: 1;
 }
@@ -123,7 +124,7 @@ input {
 
 .dial {
   position: relative;
-  width: min(100%, 360px);
+  width: min(100%, 300px);
   aspect-ratio: 1;
   margin: 0 auto;
   touch-action: none;
@@ -223,12 +224,47 @@ input {
   accent-color: var(--amber);
 }
 
+.preset-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.preset-button,
+.secondary-button {
+  min-width: 0;
+  min-height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.045);
+  cursor: pointer;
+}
+
+.preset-button:hover,
+.secondary-button:hover {
+  border-color: rgba(245, 177, 27, 0.42);
+  color: #fff7df;
+}
+
+.preset-button:disabled,
+.secondary-button:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+
+.action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
 .mute-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  min-height: 48px;
+  min-height: 46px;
   border: 1px solid rgba(245, 177, 27, 0.35);
   border-radius: 8px;
   color: #0e0c05;
@@ -305,17 +341,31 @@ input {
   .app-shell {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(420px, 58vh) auto;
+    height: auto;
     min-height: 100%;
   }
 
   .control-panel {
     height: auto;
+    gap: 18px;
     border-top: 1px solid var(--line);
     border-left: 0;
   }
 
+  .dial {
+    width: min(100%, 340px);
+  }
+
   .frequency-readout strong {
     font-size: 40px;
+  }
+}
+
+@media (max-height: 680px) and (min-width: 901px) {
+  .control-panel {
+    justify-content: flex-start;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 }
 

@@ -33,6 +33,7 @@ export class WebGPUChladniRenderer {
     this.camera = null;
     this.renderer = null;
     this.particles = null;
+    this.computeInit = null;
     this.computeUpdate = null;
 
     this.modeA = {
@@ -121,7 +122,7 @@ export class WebGPUChladniRenderer {
     const sizes = instancedArray(this.particleCount, "float");
     const seeds = instancedArray(this.particleCount, "float");
 
-    const computeInit = Fn(() => {
+    this.computeInit = Fn(() => {
       const position = positions.element(instanceIndex);
       const velocity = velocities.element(instanceIndex);
       const color = colors.element(instanceIndex);
@@ -191,7 +192,7 @@ export class WebGPUChladniRenderer {
     this.particles.frustumCulled = false;
     this.scene.add(this.particles);
 
-    await this.renderer.computeAsync(computeInit);
+    await this.resetParticles();
   }
 
   updateFrequency(frequencyHz) {
@@ -207,6 +208,11 @@ export class WebGPUChladniRenderer {
 
   async setParticleCount(nextCount) {
     await this.rebuildParticles(nextCount);
+  }
+
+  async resetParticles() {
+    if (!this.computeInit) return;
+    await this.renderer.computeAsync(this.computeInit);
   }
 
   resize() {

@@ -7,7 +7,10 @@
 - WebGPU particle simulation and display using Three.js WebGPU/TSL compute.
 - Reduced WebGL fallback for browsers without WebGPU support.
 - Real-time frequency dial from 345 Hz to 5907 Hz.
+- Reference frequency preset buttons for the visible Chladni modes.
 - Particle-count slider from 5k to 500k particles.
+- Sand reset control for restarting the particle distribution.
+- In-app WebGPU/WebGL fallback switch.
 - Muted-by-default Web Audio tone that follows the exact dial frequency.
 - Responsive top-down plate view with realistic off-white sand particles.
 
@@ -31,6 +34,9 @@ npm run build
 ## Controls
 
 - Drag the circular dial to change frequency and morph the sand pattern.
+- Click a preset Hz button to jump to a reference Chladni mode.
 - Use the particle slider to rebuild the simulation from 5k to 500k particles.
+- Click `Reset Sand` to restart the particle distribution.
+- Click `Use Fallback` or `Use WebGPU` to switch renderer mode.
 - Click the tone button to unmute or mute the exact-Hz oscillator.
 - Use arrow keys on the dial for fine frequency changes, or Shift+Arrow for larger steps.
