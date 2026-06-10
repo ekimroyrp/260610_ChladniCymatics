@@ -1,24 +1,36 @@
 # 260610_ChladniCymatics
 
-260610_ChladniCymatics is a local creative-coding project for exploring Chladni plate and cymatics-style resonance patterns. The project is starting with a lightweight repository structure so the core simulation, audio controls, and visual interaction model can be built cleanly over time.
+260610_ChladniCymatics is a WebGPU-first Three.js cymatics explorer that renders Chladni-style sand patterns on a square plate. The app uses analytic plate modes to move thousands of particles toward nodal lines in real time while a frequency dial changes the audible and visual resonance.
 
 ## Features
 
-- Project scaffold for a Chladni cymatics visualizer.
-- Repository-ready documentation for setup and future development.
-- Planned support for interactive frequency, mode, and pattern controls.
+- WebGPU particle simulation and display using Three.js WebGPU/TSL compute.
+- Reduced WebGL fallback for browsers without WebGPU support.
+- Real-time frequency dial from 345 Hz to 5907 Hz.
+- Particle-count slider from 5k to 500k particles.
+- Muted-by-default Web Audio tone that follows the exact dial frequency.
+- Responsive top-down plate view with realistic off-white sand particles.
 
 ## Getting Started
 
-Clone the repository and open the project folder:
+Install dependencies and run the Vite dev server:
 
 ```powershell
-git clone https://github.com/ekimroyrp/260610_ChladniCymatics.git
-cd 260610_ChladniCymatics
+npm install
+npm run dev
 ```
 
-Additional setup commands will be added once the app framework is created.
+Open `http://127.0.0.1:5173/` in a WebGPU-capable browser. To inspect the reduced fallback intentionally, open `http://127.0.0.1:5173/?renderer=webgl`.
+
+Build for production:
+
+```powershell
+npm run build
+```
 
 ## Controls
 
-Controls will be documented here as the cymatics interface is implemented.
+- Drag the circular dial to change frequency and morph the sand pattern.
+- Use the particle slider to rebuild the simulation from 5k to 500k particles.
+- Click the tone button to unmute or mute the exact-Hz oscillator.
+- Use arrow keys on the dial for fine frequency changes, or Shift+Arrow for larger steps.
