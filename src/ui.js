@@ -2,6 +2,9 @@ import { MAX_FREQUENCY, MIN_FREQUENCY, PATTERN_MODES } from "./patterns.js";
 
 const MIN_PARTICLES = 5000;
 const MAX_PARTICLES = 500000;
+const DIAL_START_DEGREES = 140;
+const DIAL_SWEEP_DEGREES = 260;
+const DIAL_END_DEGREES = DIAL_START_DEGREES + DIAL_SWEEP_DEGREES;
 
 export function createInterface(root, initialState, handlers) {
   root.innerHTML = `
@@ -11,16 +14,11 @@ export function createInterface(root, initialState, handlers) {
         <div class="status-pill" id="renderer-status"></div>
       </section>
       <aside class="control-panel" aria-label="Cymatics controls">
-        <div class="frequency-readout">
-          <span>Frequency</span>
-          <strong id="frequency-value">${Math.round(initialState.frequencyHz)}</strong>
-          <small>Hz</small>
-        </div>
         <div class="dial" id="frequency-dial" role="slider" aria-label="Frequency" tabindex="0"
           aria-valuemin="${MIN_FREQUENCY}" aria-valuemax="${MAX_FREQUENCY}" aria-valuenow="${Math.round(initialState.frequencyHz)}">
           <svg class="dial-svg" viewBox="0 0 320 320" aria-hidden="true">
             <circle class="dial-base" cx="160" cy="160" r="130"></circle>
-            <path class="dial-arc" id="dial-arc" d=""></path>
+            <circle class="dial-arc" id="dial-arc" cx="160" cy="160" r="130"></circle>
             <g id="dial-ticks"></g>
             <circle class="dial-knob" id="dial-knob" cx="160" cy="30" r="17"></circle>
           </svg>
@@ -29,14 +27,17 @@ export function createInterface(root, initialState, handlers) {
             <span>Hz</span>
           </div>
         </div>
+        <div class="section-heading">Presets</div>
         <div class="preset-strip" id="preset-strip" aria-label="Frequency presets">
           ${PATTERN_MODES.map((mode) => `<button class="preset-button" type="button" data-frequency="${mode.frequency}">${mode.frequency}</button>`).join("")}
         </div>
-        <div class="control-row">
-          <label for="particle-count">Particles</label>
-          <output id="particle-count-output">${formatParticleCount(initialState.particleCount)}</output>
+        <div class="particle-control">
+          <div class="control-row">
+            <label for="particle-count">Particles</label>
+            <output id="particle-count-output">${formatParticleCount(initialState.particleCount)}</output>
+          </div>
+          <input id="particle-count" class="particle-slider" type="range" min="${MIN_PARTICLES}" max="${MAX_PARTICLES}" step="5000" value="${initialState.particleCount}" />
         </div>
-        <input id="particle-count" class="particle-slider" type="range" min="${MIN_PARTICLES}" max="${MAX_PARTICLES}" step="5000" value="${initialState.particleCount}" />
         <div class="action-row">
           <button class="secondary-button" id="reset-sand" type="button">Reset Sand</button>
           <button class="secondary-button" id="renderer-toggle" type="button">Use Fallback</button>
@@ -54,7 +55,6 @@ export function createInterface(root, initialState, handlers) {
   const arc = root.querySelector("#dial-arc");
   const knob = root.querySelector("#dial-knob");
   const ticks = root.querySelector("#dial-ticks");
-  const value = root.querySelector("#frequency-value");
   const centerValue = root.querySelector("#dial-center-frequency");
   const particleSlider = root.querySelector("#particle-count");
   const particleOutput = root.querySelector("#particle-count-output");
@@ -185,13 +185,13 @@ export function createInterface(root, initialState, handlers) {
     const progress = (nextFrequency - MIN_FREQUENCY) / (MAX_FREQUENCY - MIN_FREQUENCY);
     const angle = progressToAngle(progress);
     const point = polarToCartesian(160, 160, 130, angle);
-    const start = polarToCartesian(160, 160, 130, progressToAngle(0));
-    const largeArc = progress > 0.5 ? 1 : 0;
+    const circumference = 2 * Math.PI * 130;
+    const visibleLength = circumference * DIAL_SWEEP_DEGREES / 360 * progress;
 
-    arc.setAttribute("d", `M ${start.x} ${start.y} A 130 130 0 ${largeArc} 1 ${point.x} ${point.y}`);
+    arc.style.strokeDasharray = `${visibleLength} ${circumference}`;
+    arc.style.strokeDashoffset = "0";
     knob.setAttribute("cx", point.x);
     knob.setAttribute("cy", point.y);
-    value.textContent = Math.round(nextFrequency);
     centerValue.textContent = Math.round(nextFrequency);
     dial.setAttribute("aria-valuenow", Math.round(nextFrequency));
   }
@@ -266,14 +266,27 @@ function renderTicks(group) {
 }
 
 function progressToAngle(progress) {
-  return (-220 + progress * 260) * (Math.PI / 180);
+  return (DIAL_START_DEGREES + progress * DIAL_SWEEP_DEGREES) * (Math.PI / 180);
 }
 
 function angleToProgress(angle) {
   let degrees = angle * (180 / Math.PI);
-  if (degrees < -220) degrees += 360;
-  const clamped = Math.min(40, Math.max(-220, degrees));
-  return (clamped + 220) / 260;
+  if (degrees < 0) degrees += 360;
+
+  const endModulo = DIAL_END_DEGREES % 360;
+
+  if (degrees < endModulo) {
+    degrees += 360;
+  }
+
+  if (degrees < DIAL_START_DEGREES) {
+    const distanceToStart = DIAL_START_DEGREES - degrees;
+    const distanceToEnd = degrees + 360 - DIAL_END_DEGREES;
+    degrees = distanceToStart <= distanceToEnd ? DIAL_START_DEGREES : DIAL_END_DEGREES;
+  }
+
+  const clamped = Math.min(DIAL_END_DEGREES, Math.max(DIAL_START_DEGREES, degrees));
+  return (clamped - DIAL_START_DEGREES) / DIAL_SWEEP_DEGREES;
 }
 
 function polarToCartesian(cx, cy, radius, angle) {
