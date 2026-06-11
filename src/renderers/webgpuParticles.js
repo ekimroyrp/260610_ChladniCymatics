@@ -20,6 +20,8 @@ import { getModeMix } from "../patterns.js";
 
 const PLATE_HALF = 3.15;
 const WORKGROUP_SIZE = 128;
+const PARTICLE_BASE_SIZE = 0.01;
+const PARTICLE_OPACITY = 0.9;
 
 export class WebGPUChladniRenderer {
   constructor(container, initialState) {
@@ -45,7 +47,7 @@ export class WebGPUChladniRenderer {
       n: uniform(2)
     };
     this.modeBlend = uniform(0);
-    this.particleSize = uniform(0.032);
+    this.particleSize = uniform(PARTICLE_BASE_SIZE);
     this.attraction = uniform(0.0022);
     this.damping = uniform(0.91);
     this.jitter = uniform(0.0016);
@@ -182,7 +184,7 @@ export class WebGPUChladniRenderer {
     material.colorNode = colors.element(instanceIndex).mul(uv().y.mul(0.18).add(0.88));
     material.positionNode = positions.toAttribute();
     material.scaleNode = sizes.element(instanceIndex).mul(this.particleSize);
-    material.opacityNode = shapeCircle();
+    material.opacityNode = shapeCircle().mul(PARTICLE_OPACITY);
     material.alphaToCoverage = true;
     material.transparent = true;
     material.depthWrite = false;

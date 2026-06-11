@@ -1,7 +1,8 @@
 import { MAX_FREQUENCY, MIN_FREQUENCY, PATTERN_MODES } from "./patterns.js";
 
 const MIN_PARTICLES = 5000;
-const MAX_PARTICLES = 500000;
+const WEBGPU_MAX_PARTICLES = 500000;
+const WEBGL_MAX_PARTICLES = 50000;
 const DIAL_START_DEGREES = 140;
 const DIAL_SWEEP_DEGREES = 260;
 const DIAL_END_DEGREES = DIAL_START_DEGREES + DIAL_SWEEP_DEGREES;
@@ -37,7 +38,7 @@ export function createInterface(root, initialState, handlers) {
             <label for="particle-count">Particles</label>
             <output id="particle-count-output">${formatParticleCount(initialState.particleCount)}</output>
           </div>
-          <input id="particle-count" class="particle-slider" type="range" min="${MIN_PARTICLES}" max="${MAX_PARTICLES}" step="5000" value="${initialState.particleCount}" />
+          <input id="particle-count" class="particle-slider" type="range" min="${MIN_PARTICLES}" max="${WEBGPU_MAX_PARTICLES}" step="5000" value="${initialState.particleCount}" />
         </div>
         <div class="action-row">
           <button class="secondary-button" id="reset-sand" type="button">Reset Sand</button>
@@ -219,6 +220,7 @@ export function createInterface(root, initialState, handlers) {
   };
 
   function updateStatus(rendererMode, isFallback) {
+    particleSlider.max = String(isFallback ? WEBGL_MAX_PARTICLES : WEBGPU_MAX_PARTICLES);
     rendererStatus.textContent = rendererMode;
     rendererStatus.classList.toggle("is-fallback", isFallback);
     rendererToggle.textContent = isFallback ? "Use WebGPU" : "Use WebGL2";

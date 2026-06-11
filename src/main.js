@@ -23,7 +23,10 @@ const audio = createAudioController(appState.frequencyHz);
 
 let activeRenderer = null;
 let ui = null;
-let requestedParticleCount = DEFAULT_PARTICLE_COUNT;
+const rendererParticleCounts = {
+  [WEBGPU_RENDERER]: DEFAULT_PARTICLE_COUNT,
+  [WEBGL_RENDERER]: FALLBACK_PARTICLE_CAP
+};
 
 startApp().catch((error) => {
   console.error(error);
@@ -46,9 +49,11 @@ async function startApp() {
     },
     onParticleCountChange: async (particleCount) => {
       const requestedCount = Number(particleCount);
-      requestedParticleCount = requestedCount;
-      const actualCount = await activeRenderer.setParticleCount(requestedCount);
-      appState.particleCount = actualCount ?? requestedCount;
+      const rendererKey = getActiveRendererKey();
+      rendererParticleCounts[rendererKey] = clampParticleCountForRenderer(rendererKey, requestedCount);
+      const actualCount = await activeRenderer.setParticleCount(rendererParticleCounts[rendererKey]);
+      appState.particleCount = actualCount ?? rendererParticleCounts[rendererKey];
+      rendererParticleCounts[rendererKey] = appState.particleCount;
       ui.updateParticleCount(appState.particleCount);
       return appState.particleCount;
     },
@@ -59,6 +64,7 @@ async function startApp() {
     onResetParticles: async () => {
       const actualCount = await activeRenderer.resetParticles();
       appState.particleCount = actualCount ?? appState.particleCount;
+      rendererParticleCounts[getActiveRendererKey()] = appState.particleCount;
       return appState.particleCount;
     },
     onRendererToggle: async () => {
@@ -70,6 +76,7 @@ async function startApp() {
   activeRenderer = await createAndInitRenderer(ui.sceneRoot, appState, WEBGPU_RENDERER);
   activeRenderer.updateFrequency(appState.frequencyHz);
   ui.updateStatus(appState.rendererMode, appState.isFallback);
+  ui.updateParticleCount(appState.particleCount);
 
   window.chladniApp = {
     state: appState,
@@ -80,9 +87,11 @@ async function startApp() {
       activeRenderer.updateFrequency(frequencyHz);
     },
     async setParticleCount(particleCount) {
-      requestedParticleCount = Number(particleCount);
-      const actualCount = await activeRenderer.setParticleCount(particleCount);
-      appState.particleCount = actualCount ?? particleCount;
+      const rendererKey = getActiveRendererKey();
+      rendererParticleCounts[rendererKey] = clampParticleCountForRenderer(rendererKey, Number(particleCount));
+      const actualCount = await activeRenderer.setParticleCount(rendererParticleCounts[rendererKey]);
+      appState.particleCount = actualCount ?? rendererParticleCounts[rendererKey];
+      rendererParticleCounts[rendererKey] = appState.particleCount;
       ui.updateParticleCount(appState.particleCount);
     },
     async setRendererMode(rendererMode) {
@@ -92,13 +101,14 @@ async function startApp() {
 }
 
 async function switchRenderer(rendererMode) {
+  rendererParticleCounts[getActiveRendererKey()] = appState.particleCount;
   activeRenderer?.dispose();
   ui.sceneRoot.innerHTML = "";
 
   activeRenderer = await createAndInitRenderer(ui.sceneRoot, appState, rendererMode);
   activeRenderer.updateFrequency(appState.frequencyHz);
-  ui.updateParticleCount(appState.particleCount);
   ui.updateStatus(appState.rendererMode, appState.isFallback);
+  ui.updateParticleCount(appState.particleCount);
 }
 
 async function createAndInitRenderer(container, state, preferredRenderer) {
@@ -106,7 +116,7 @@ async function createAndInitRenderer(container, state, preferredRenderer) {
     try {
       state.rendererMode = "WebGPU";
       state.isFallback = false;
-      state.particleCount = requestedParticleCount;
+      state.particleCount = rendererParticleCounts[WEBGPU_RENDERER];
       const renderer = new WebGPUChladniRenderer(container, state);
       await renderer.init();
       return renderer;
@@ -118,9 +128,17 @@ async function createAndInitRenderer(container, state, preferredRenderer) {
 
   state.rendererMode = "WebGL2";
   state.isFallback = true;
-  state.particleCount = Math.min(requestedParticleCount, FALLBACK_PARTICLE_CAP);
-  ui.updateParticleCount(state.particleCount);
+  state.particleCount = rendererParticleCounts[WEBGL_RENDERER];
   const fallbackRenderer = new WebGLFallbackRenderer(container, state);
   await fallbackRenderer.init();
   return fallbackRenderer;
+}
+
+function getActiveRendererKey() {
+  return appState.isFallback ? WEBGL_RENDERER : WEBGPU_RENDERER;
+}
+
+function clampParticleCountForRenderer(rendererKey, particleCount) {
+  const count = Number.isFinite(particleCount) ? particleCount : DEFAULT_PARTICLE_COUNT;
+  return rendererKey === WEBGL_RENDERER ? Math.min(count, FALLBACK_PARTICLE_CAP) : count;
 }
