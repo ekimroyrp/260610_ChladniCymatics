@@ -5,23 +5,28 @@ export function createAudioController(initialFrequency) {
   let muted = true;
   let frequencyHz = initialFrequency;
 
+  function createOscillator(startTime = 0) {
+    const nextOscillator = context.createOscillator();
+    nextOscillator.type = "sine";
+    nextOscillator.frequency.value = frequencyHz;
+    nextOscillator.connect(gain);
+    nextOscillator.start(startTime);
+    return nextOscillator;
+  }
+
   function ensureAudio() {
     if (context) return;
 
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     context = new AudioContextClass();
-    oscillator = context.createOscillator();
     gain = context.createGain();
 
-    oscillator.type = "sine";
-    oscillator.frequency.value = frequencyHz;
     gain.gain.value = 0;
-    oscillator.connect(gain).connect(context.destination);
-    oscillator.start();
+    gain.connect(context.destination);
+    oscillator = createOscillator();
   }
 
-  async function setMuted(nextMuted) {
-    muted = nextMuted;
+  async function resumeAudio() {
     ensureAudio();
 
     if (context.state === "suspended") {
@@ -32,6 +37,11 @@ export function createAudioController(initialFrequency) {
         })
       ]);
     }
+  }
+
+  async function setMuted(nextMuted) {
+    muted = nextMuted;
+    await resumeAudio();
 
     const now = context.currentTime;
     const targetGain = muted ? 0 : 0.035;
@@ -48,11 +58,34 @@ export function createAudioController(initialFrequency) {
     oscillator.frequency.setTargetAtTime(frequencyHz, context.currentTime, 0.01);
   }
 
+  async function restartTone() {
+    await resumeAudio();
+
+    const now = context.currentTime;
+    const restartAt = muted ? now : now + 0.018;
+    const oldOscillator = oscillator;
+
+    if (!muted) {
+      gain.gain.cancelScheduledValues(now);
+      gain.gain.setTargetAtTime(0, now, 0.004);
+      gain.gain.setValueAtTime(0, restartAt);
+      gain.gain.setTargetAtTime(0.035, restartAt, 0.015);
+    }
+
+    oscillator = createOscillator(restartAt);
+
+    if (oldOscillator) {
+      oldOscillator.stop(restartAt);
+      oldOscillator.onended = () => oldOscillator.disconnect();
+    }
+  }
+
   return {
     get muted() {
       return muted;
     },
     setMuted,
-    setFrequency
+    setFrequency,
+    restartTone
   };
 }

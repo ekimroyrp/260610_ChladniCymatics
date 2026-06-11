@@ -84,7 +84,6 @@ export class WebGPUChladniRenderer {
 
     await this.renderer.init();
 
-    this.addPlate();
     await this.rebuildParticles(this.particleCount);
     this.updateFrequency(this.frequencyHz);
     this.resize();
@@ -92,34 +91,6 @@ export class WebGPUChladniRenderer {
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(this.container);
     this.renderer.setAnimationLoop(() => this.animate());
-  }
-
-  addPlate() {
-    const plateGeometry = new THREE.PlaneGeometry(PLATE_HALF * 2, PLATE_HALF * 2);
-    const plateMaterial = new THREE.MeshBasicMaterial({ color: 0x202628 });
-    const plate = new THREE.Mesh(plateGeometry, plateMaterial);
-    plate.position.z = -0.035;
-    this.scene.add(plate);
-
-    const rimGeometry = new THREE.EdgesGeometry(plateGeometry);
-    const rimMaterial = new THREE.LineBasicMaterial({ color: 0x4c5558, transparent: true, opacity: 0.62 });
-    const rim = new THREE.LineSegments(rimGeometry, rimMaterial);
-    rim.position.z = -0.025;
-    this.scene.add(rim);
-
-    const bolt = new THREE.Mesh(
-      new THREE.CircleGeometry(0.07, 40),
-      new THREE.MeshBasicMaterial({ color: 0xb8bab2 })
-    );
-    bolt.position.z = 0.02;
-    this.scene.add(bolt);
-
-    const ring = new THREE.LineSegments(
-      new THREE.EdgesGeometry(new THREE.RingGeometry(0.28, 0.295, 72)),
-      new THREE.LineBasicMaterial({ color: 0x606861, transparent: true, opacity: 0.55 })
-    );
-    ring.position.z = 0.015;
-    this.scene.add(ring);
   }
 
   async rebuildParticles(nextCount) {

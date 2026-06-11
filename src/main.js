@@ -27,6 +27,8 @@ const appState = {
 };
 
 const root = document.querySelector("#app");
+root.addEventListener("contextmenu", (event) => event.preventDefault());
+
 const audio = createAudioController(appState.frequencyHz);
 
 let activeRenderer = null;
@@ -84,6 +86,9 @@ async function startApp() {
     onMutedChange: async (muted) => {
       appState.muted = muted;
       await audio.setMuted(muted);
+    },
+    onToneRestart: async () => {
+      await audio.restartTone();
     },
     onResetParticles: async () => {
       const actualCount = await activeRenderer.resetParticles();

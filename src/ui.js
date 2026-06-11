@@ -81,7 +81,6 @@ export function createInterface(root, initialState, handlers) {
           <button class="secondary-button" id="renderer-toggle" type="button">Use WebGL2</button>
         </div>
         <button class="mute-button" id="mute-button" type="button" aria-pressed="${!initialState.muted}">
-          <span class="mute-icon" aria-hidden="true"></span>
           <span id="mute-label">${initialState.muted ? "Unmute Tone" : "Mute Tone"}</span>
         </button>
       </aside>
@@ -114,6 +113,7 @@ export function createInterface(root, initialState, handlers) {
   let frequencyHz = initialState.frequencyHz;
   let muted = initialState.muted;
   let pointerActive = false;
+  let controlsBusy = false;
 
   renderTicks(ticks);
   updateFrequencyVisuals(frequencyHz);
@@ -196,15 +196,21 @@ export function createInterface(root, initialState, handlers) {
     handlers.onParticleBlurChange(blur);
   });
 
-  presetStrip.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-frequency]");
-    if (!button) return;
-
-    const nextFrequency = Number(button.dataset.frequency);
-    setFrequency(nextFrequency, true);
+  sceneRoot.addEventListener("click", async (event) => {
+    if (controlsBusy || event.target?.tagName !== "CANVAS") return;
+    await applyPresetFrequency(getRandomPresetFrequency(frequencyHz));
   });
 
-  resetSandButton.addEventListener("click", async () => {
+  presetStrip.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-frequency]");
+    if (!button || controlsBusy) return;
+
+    await applyPresetFrequency(Number(button.dataset.frequency));
+  });
+
+  resetSandButton.addEventListener("click", resetParticles);
+
+  async function resetParticles() {
     setControlsBusy(true);
     try {
       const actualCount = await handlers.onResetParticles();
@@ -215,7 +221,19 @@ export function createInterface(root, initialState, handlers) {
     } finally {
       setControlsBusy(false);
     }
-  });
+  }
+
+  async function applyPresetFrequency(nextFrequency) {
+    const isSameFrequency = normalizeFrequency(nextFrequency) === frequencyHz;
+    setFrequency(nextFrequency, true);
+    const resetPromise = resetParticles();
+
+    if (isSameFrequency) {
+      await handlers.onToneRestart();
+    }
+
+    await resetPromise;
+  }
 
   rendererToggle.addEventListener("click", async () => {
     setControlsBusy(true);
@@ -248,7 +266,7 @@ export function createInterface(root, initialState, handlers) {
   }
 
   function setFrequency(nextFrequency, emit) {
-    frequencyHz = Math.round(Math.min(MAX_FREQUENCY, Math.max(MIN_FREQUENCY, nextFrequency)));
+    frequencyHz = normalizeFrequency(nextFrequency);
     updateFrequencyVisuals(frequencyHz);
 
     if (emit) {
@@ -311,6 +329,7 @@ export function createInterface(root, initialState, handlers) {
   }
 
   function setControlsBusy(isBusy) {
+    controlsBusy = isBusy;
     particleSlider.disabled = isBusy;
     speedSlider.disabled = isBusy;
     sizeSlider.disabled = isBusy;
@@ -322,6 +341,17 @@ export function createInterface(root, initialState, handlers) {
       button.disabled = isBusy;
     });
   }
+}
+
+function getRandomPresetFrequency(currentFrequency) {
+  const availableModes = PATTERN_MODES.filter((mode) => mode.frequency !== currentFrequency);
+  const modes = availableModes.length > 0 ? availableModes : PATTERN_MODES;
+  const index = Math.floor(Math.random() * modes.length);
+  return modes[index].frequency;
+}
+
+function normalizeFrequency(frequencyHz) {
+  return Math.round(Math.min(MAX_FREQUENCY, Math.max(MIN_FREQUENCY, frequencyHz)));
 }
 
 function renderTicks(group) {

@@ -52,35 +52,12 @@ export class WebGLFallbackRenderer {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.container.append(this.renderer.domElement);
 
-    this.addPlate();
     this.rebuildParticles(this.particleCount);
     this.resize();
 
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(this.container);
     this.animate();
-  }
-
-  addPlate() {
-    const plateGeometry = new THREE.PlaneGeometry(PLATE_HALF * 2, PLATE_HALF * 2);
-    const plateMaterial = new THREE.MeshBasicMaterial({ color: 0x202628 });
-    const plate = new THREE.Mesh(plateGeometry, plateMaterial);
-    plate.position.z = -0.035;
-    this.scene.add(plate);
-
-    const rim = new THREE.LineSegments(
-      new THREE.EdgesGeometry(plateGeometry),
-      new THREE.LineBasicMaterial({ color: 0x4c5558, transparent: true, opacity: 0.62 })
-    );
-    rim.position.z = -0.025;
-    this.scene.add(rim);
-
-    const bolt = new THREE.Mesh(
-      new THREE.CircleGeometry(0.07, 40),
-      new THREE.MeshBasicMaterial({ color: 0xb8bab2 })
-    );
-    bolt.position.z = 0.02;
-    this.scene.add(bolt);
   }
 
   rebuildParticles(requestedCount) {
