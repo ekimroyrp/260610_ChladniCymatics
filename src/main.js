@@ -6,6 +6,9 @@ import { WebGPUChladniRenderer } from "./renderers/webgpuParticles.js";
 import { WebGLFallbackRenderer } from "./renderers/webglFallback.js";
 
 const DEFAULT_PARTICLE_COUNT = 150000;
+const DEFAULT_PARTICLE_SPEED = 0.2;
+const DEFAULT_PARTICLE_SIZE = 0.02;
+const DEFAULT_PARTICLE_BLUR = 0.05;
 const FALLBACK_PARTICLE_CAP = 50000;
 const WEBGPU_RENDERER = "webgpu";
 const WEBGL_RENDERER = "webgl";
@@ -13,6 +16,9 @@ const WEBGL_RENDERER = "webgl";
 const appState = {
   frequencyHz: MIN_FREQUENCY,
   particleCount: DEFAULT_PARTICLE_COUNT,
+  particleSpeed: DEFAULT_PARTICLE_SPEED,
+  particleSize: DEFAULT_PARTICLE_SIZE,
+  particleBlur: DEFAULT_PARTICLE_BLUR,
   muted: true,
   rendererMode: "WebGPU",
   isFallback: false
@@ -57,6 +63,18 @@ async function startApp() {
       ui.updateParticleCount(appState.particleCount);
       return appState.particleCount;
     },
+    onParticleSpeedChange: (particleSpeed) => {
+      appState.particleSpeed = particleSpeed;
+      activeRenderer?.setParticleSpeed(particleSpeed);
+    },
+    onParticleSizeChange: (particleSize) => {
+      appState.particleSize = particleSize;
+      activeRenderer?.setParticleSize(particleSize);
+    },
+    onParticleBlurChange: (particleBlur) => {
+      appState.particleBlur = particleBlur;
+      activeRenderer?.setParticleBlur(particleBlur);
+    },
     onMutedChange: async (muted) => {
       appState.muted = muted;
       await audio.setMuted(muted);
@@ -75,8 +93,14 @@ async function startApp() {
 
   activeRenderer = await createAndInitRenderer(ui.sceneRoot, appState, WEBGPU_RENDERER);
   activeRenderer.updateFrequency(appState.frequencyHz);
+  activeRenderer.setParticleSpeed(appState.particleSpeed);
+  activeRenderer.setParticleSize(appState.particleSize);
+  activeRenderer.setParticleBlur(appState.particleBlur);
   ui.updateStatus(appState.rendererMode, appState.isFallback);
   ui.updateParticleCount(appState.particleCount);
+  ui.updateParticleSpeed(appState.particleSpeed);
+  ui.updateParticleSize(appState.particleSize);
+  ui.updateParticleBlur(appState.particleBlur);
 
   window.chladniApp = {
     state: appState,
@@ -94,6 +118,21 @@ async function startApp() {
       rendererParticleCounts[rendererKey] = appState.particleCount;
       ui.updateParticleCount(appState.particleCount);
     },
+    setParticleSpeed(particleSpeed) {
+      appState.particleSpeed = Number(particleSpeed);
+      ui.updateParticleSpeed(appState.particleSpeed);
+      activeRenderer.setParticleSpeed(appState.particleSpeed);
+    },
+    setParticleSize(particleSize) {
+      appState.particleSize = Number(particleSize);
+      ui.updateParticleSize(appState.particleSize);
+      activeRenderer.setParticleSize(appState.particleSize);
+    },
+    setParticleBlur(particleBlur) {
+      appState.particleBlur = Number(particleBlur);
+      ui.updateParticleBlur(appState.particleBlur);
+      activeRenderer.setParticleBlur(appState.particleBlur);
+    },
     async setRendererMode(rendererMode) {
       await switchRenderer(rendererMode === WEBGL_RENDERER ? WEBGL_RENDERER : WEBGPU_RENDERER);
     }
@@ -107,6 +146,9 @@ async function switchRenderer(rendererMode) {
 
   activeRenderer = await createAndInitRenderer(ui.sceneRoot, appState, rendererMode);
   activeRenderer.updateFrequency(appState.frequencyHz);
+  activeRenderer.setParticleSpeed(appState.particleSpeed);
+  activeRenderer.setParticleSize(appState.particleSize);
+  activeRenderer.setParticleBlur(appState.particleBlur);
   ui.updateStatus(appState.rendererMode, appState.isFallback);
   ui.updateParticleCount(appState.particleCount);
 }

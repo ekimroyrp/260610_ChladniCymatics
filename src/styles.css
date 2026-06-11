@@ -206,12 +206,14 @@ input {
   color: var(--muted-text);
 }
 
-.particle-control {
+.particle-control,
+.range-control {
   display: grid;
   gap: 3px;
 }
 
-.particle-slider {
+.particle-slider,
+.control-slider {
   width: 100%;
   height: 10px;
   margin: 0;

@@ -3,6 +3,12 @@ import { MAX_FREQUENCY, MIN_FREQUENCY, PATTERN_MODES } from "./patterns.js";
 const MIN_PARTICLES = 5000;
 const WEBGPU_MAX_PARTICLES = 500000;
 const WEBGL_MAX_PARTICLES = 50000;
+const MIN_PARTICLE_SPEED = 0.1;
+const MAX_PARTICLE_SPEED = 3;
+const MIN_PARTICLE_SIZE = 0.004;
+const MAX_PARTICLE_SIZE = 0.05;
+const MIN_PARTICLE_BLUR = 0;
+const MAX_PARTICLE_BLUR = 1;
 const DIAL_START_DEGREES = 140;
 const DIAL_SWEEP_DEGREES = 260;
 const DIAL_END_DEGREES = DIAL_START_DEGREES + DIAL_SWEEP_DEGREES;
@@ -40,6 +46,27 @@ export function createInterface(root, initialState, handlers) {
           </div>
           <input id="particle-count" class="particle-slider" type="range" min="${MIN_PARTICLES}" max="${WEBGPU_MAX_PARTICLES}" step="5000" value="${initialState.particleCount}" />
         </div>
+        <div class="range-control">
+          <div class="control-row">
+            <label for="particle-speed">Speed</label>
+            <output id="particle-speed-output">${formatParticleSpeed(initialState.particleSpeed)}</output>
+          </div>
+          <input id="particle-speed" class="control-slider" type="range" min="${MIN_PARTICLE_SPEED}" max="${MAX_PARTICLE_SPEED}" step="0.05" value="${initialState.particleSpeed}" />
+        </div>
+        <div class="range-control">
+          <div class="control-row">
+            <label for="particle-size">Size</label>
+            <output id="particle-size-output">${formatParticleSize(initialState.particleSize)}</output>
+          </div>
+          <input id="particle-size" class="control-slider" type="range" min="${MIN_PARTICLE_SIZE}" max="${MAX_PARTICLE_SIZE}" step="0.001" value="${initialState.particleSize}" />
+        </div>
+        <div class="range-control">
+          <div class="control-row">
+            <label for="particle-blur">Blur</label>
+            <output id="particle-blur-output">${formatParticleBlur(initialState.particleBlur)}</output>
+          </div>
+          <input id="particle-blur" class="control-slider" type="range" min="${MIN_PARTICLE_BLUR}" max="${MAX_PARTICLE_BLUR}" step="0.01" value="${initialState.particleBlur}" />
+        </div>
         <div class="action-row">
           <button class="secondary-button" id="reset-sand" type="button">Reset Sand</button>
           <button class="secondary-button" id="renderer-toggle" type="button">Use WebGL2</button>
@@ -60,6 +87,12 @@ export function createInterface(root, initialState, handlers) {
   const centerValue = root.querySelector("#dial-center-frequency");
   const particleSlider = root.querySelector("#particle-count");
   const particleOutput = root.querySelector("#particle-count-output");
+  const speedSlider = root.querySelector("#particle-speed");
+  const speedOutput = root.querySelector("#particle-speed-output");
+  const sizeSlider = root.querySelector("#particle-size");
+  const sizeOutput = root.querySelector("#particle-size-output");
+  const blurSlider = root.querySelector("#particle-blur");
+  const blurOutput = root.querySelector("#particle-blur-output");
   const presetStrip = root.querySelector("#preset-strip");
   const resetSandButton = root.querySelector("#reset-sand");
   const rendererToggle = root.querySelector("#renderer-toggle");
@@ -126,6 +159,24 @@ export function createInterface(root, initialState, handlers) {
     } finally {
       setControlsBusy(false);
     }
+  });
+
+  speedSlider.addEventListener("input", () => {
+    const speed = Number(speedSlider.value);
+    speedOutput.textContent = formatParticleSpeed(speed);
+    handlers.onParticleSpeedChange(speed);
+  });
+
+  sizeSlider.addEventListener("input", () => {
+    const size = Number(sizeSlider.value);
+    sizeOutput.textContent = formatParticleSize(size);
+    handlers.onParticleSizeChange(size);
+  });
+
+  blurSlider.addEventListener("input", () => {
+    const blur = Number(blurSlider.value);
+    blurOutput.textContent = formatParticleBlur(blur);
+    handlers.onParticleBlurChange(blur);
   });
 
   presetStrip.addEventListener("click", (event) => {
@@ -216,6 +267,18 @@ export function createInterface(root, initialState, handlers) {
       particleSlider.value = count;
       particleOutput.textContent = formatParticleCount(count);
     },
+    updateParticleSpeed: (speed) => {
+      speedSlider.value = speed;
+      speedOutput.textContent = formatParticleSpeed(speed);
+    },
+    updateParticleSize: (size) => {
+      sizeSlider.value = size;
+      sizeOutput.textContent = formatParticleSize(size);
+    },
+    updateParticleBlur: (blur) => {
+      blurSlider.value = blur;
+      blurOutput.textContent = formatParticleBlur(blur);
+    },
     updateStatus
   };
 
@@ -228,6 +291,9 @@ export function createInterface(root, initialState, handlers) {
 
   function setControlsBusy(isBusy) {
     particleSlider.disabled = isBusy;
+    speedSlider.disabled = isBusy;
+    sizeSlider.disabled = isBusy;
+    blurSlider.disabled = isBusy;
     resetSandButton.disabled = isBusy;
     rendererToggle.disabled = isBusy;
     presetStrip.querySelectorAll("button").forEach((button) => {
@@ -307,4 +373,16 @@ function polarToCartesian(cx, cy, radius, angle) {
 function formatParticleCount(value) {
   if (value >= 1000000) return `${(value / 1000000).toFixed(1)}m`;
   return `${Math.round(value / 1000)}k`;
+}
+
+function formatParticleSpeed(value) {
+  return `${Number(value).toFixed(2)}x`;
+}
+
+function formatParticleSize(value) {
+  return Number(value).toFixed(3);
+}
+
+function formatParticleBlur(value) {
+  return `${Math.round(Number(value) * 100)}%`;
 }

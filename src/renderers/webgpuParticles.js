@@ -8,20 +8,28 @@ import {
   hash,
   instanceIndex,
   instancedArray,
+  lengthSq,
   mix,
+  oneMinus,
   shapeCircle,
   sin,
+  smoothstep,
   time,
   uniform,
   uv,
-  vec3
+  vec3,
+  vec4
 } from "three/tsl";
 import { getModeMix } from "../patterns.js";
 
 const PLATE_HALF = 3.15;
 const WORKGROUP_SIZE = 128;
 const PARTICLE_BASE_SIZE = 0.01;
-const PARTICLE_OPACITY = 0.9;
+const BASE_OPACITY_AMOUNT = 100000;
+const BASE_PARTICLE_OPACITY = 0.006;
+const LOW_BLUR_PARTICLE_OPACITY = 0.035;
+const CRISP_PARTICLE_OPACITY = 0.9;
+const BLUR_RESPONSE_POWER = 3.2;
 
 export class WebGPUChladniRenderer {
   constructor(container, initialState) {
@@ -47,7 +55,10 @@ export class WebGPUChladniRenderer {
       n: uniform(2)
     };
     this.modeBlend = uniform(0);
-    this.particleSize = uniform(PARTICLE_BASE_SIZE);
+    this.particleSpeed = uniform(initialState.particleSpeed ?? 1);
+    this.particleSize = uniform(initialState.particleSize ?? PARTICLE_BASE_SIZE);
+    this.particleBlur = uniform(initialState.particleBlur ?? 1);
+    this.particleOpacity = uniform(getParticleOpacityForSettings(this.particleCount, this.particleSize.value, this.particleBlur.value));
     this.attraction = uniform(0.0022);
     this.damping = uniform(0.91);
     this.jitter = uniform(0.0016);
@@ -160,7 +171,7 @@ export class WebGPUChladniRenderer {
       velocity.x = velocity.x.add(gradientX.mul(nodePull)).add(pulse.mul(0.6));
       velocity.y = velocity.y.add(gradientY.mul(nodePull)).add(pulse.mul(0.35));
       velocity.mulAssign(this.damping);
-      position.addAssign(velocity);
+      position.addAssign(velocity.mul(this.particleSpeed));
 
       If(position.x.greaterThan(PLATE_HALF), () => {
         position.x = PLATE_HALF;
@@ -180,14 +191,21 @@ export class WebGPUChladniRenderer {
       });
     })().compute(this.particleCount, [WORKGROUP_SIZE]).setName("Update Chladni Sand");
 
-    const material = new THREE.SpriteNodeMaterial();
-    material.colorNode = colors.element(instanceIndex).mul(uv().y.mul(0.18).add(0.88));
+    this.particleOpacity.value = getParticleOpacityForSettings(this.particleCount, this.particleSize.value, this.particleBlur.value);
+
+    const material = new THREE.SpriteNodeMaterial({
+      blending: getParticleBlending(this.particleBlur.value),
+      depthWrite: false,
+      transparent: true,
+      opacity: 1
+    });
+    material.colorNode = vec4(
+      colors.element(instanceIndex).mul(uv().y.mul(0.18).add(0.88)),
+      this.particleOpacity
+    );
     material.positionNode = positions.toAttribute();
     material.scaleNode = sizes.element(instanceIndex).mul(this.particleSize);
-    material.opacityNode = shapeCircle().mul(PARTICLE_OPACITY);
-    material.alphaToCoverage = true;
-    material.transparent = true;
-    material.depthWrite = false;
+    material.opacityNode = mix(shapeCircle(), softParticleMask(), easedBlurNode(this.particleBlur));
 
     this.particles = new THREE.Sprite(material);
     this.particles.count = this.particleCount;
@@ -210,6 +228,22 @@ export class WebGPUChladniRenderer {
 
   async setParticleCount(nextCount) {
     await this.rebuildParticles(nextCount);
+    return this.particleCount;
+  }
+
+  setParticleSpeed(nextSpeed) {
+    this.particleSpeed.value = nextSpeed;
+  }
+
+  setParticleSize(nextSize) {
+    this.particleSize.value = nextSize;
+    this.updateParticleOpacity();
+  }
+
+  setParticleBlur(nextBlur) {
+    this.particleBlur.value = clamp01(nextBlur);
+    this.updateParticleOpacity();
+    this.updateParticleBlending();
   }
 
   async resetParticles() {
@@ -250,6 +284,64 @@ export class WebGPUChladniRenderer {
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
+
+  updateParticleOpacity() {
+    this.particleOpacity.value = getParticleOpacityForSettings(
+      this.particleCount,
+      this.particleSize.value,
+      this.particleBlur.value
+    );
+  }
+
+  updateParticleBlending() {
+    if (!this.particles) return;
+    const material = this.particles.material;
+    const nextBlending = getParticleBlending(this.particleBlur.value);
+    if (material.blending === nextBlending) return;
+    material.blending = nextBlending;
+    material.needsUpdate = true;
+  }
+}
+
+function getParticleOpacityForSettings(amount, particleSize = PARTICLE_BASE_SIZE, particleBlur = 1) {
+  const blur = clamp01(particleBlur);
+  if (blur <= 0.001) return CRISP_PARTICLE_OPACITY;
+  const easedBlur = easeBlur(blur);
+
+  const safeAmount = Math.max(1, amount);
+  const sizeScale = Math.min(1.4, Math.max(0.25, PARTICLE_BASE_SIZE / Math.max(0.001, particleSize)));
+  const softOpacity = Math.min(
+    0.035,
+    Math.max(0.0015, BASE_PARTICLE_OPACITY * Math.sqrt(BASE_OPACITY_AMOUNT / safeAmount) * sizeScale)
+  );
+  return mixNumber(LOW_BLUR_PARTICLE_OPACITY, softOpacity, easedBlur);
+}
+
+function getParticleBlending(particleBlur) {
+  return particleBlur <= 0.001 ? THREE.NormalBlending : THREE.AdditiveBlending;
+}
+
+function clamp01(value) {
+  return Math.min(1, Math.max(0, Number(value)));
+}
+
+function mixNumber(a, b, t) {
+  const amount = clamp01(t);
+  return a * (1 - amount) + b * amount;
+}
+
+function easeBlur(value) {
+  return Math.pow(clamp01(value), BLUR_RESPONSE_POWER);
+}
+
+function easedBlurNode(value) {
+  const squared = value.mul(value);
+  return squared.mul(squared).mul(0.45).add(value.mul(value).mul(value).mul(0.55));
+}
+
+function softParticleMask() {
+  const radial = lengthSq(uv().mul(2).sub(1));
+  return oneMinus(smoothstep(0.0, 1.0, radial));
 }
 
 function computeFieldAndGradient(x, y, m, n) {
