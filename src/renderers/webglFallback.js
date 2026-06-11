@@ -19,9 +19,12 @@ export class WebGLFallbackRenderer {
     this.particleCount = Math.min(initialState.particleCount, FALLBACK_CAP);
     this.particleSpeed = initialState.particleSpeed ?? 1;
     this.particleSize = initialState.particleSize ?? DEFAULT_PARTICLE_SIZE;
+    this.particleOffset = initialState.particleOffset ?? 0;
     this.particleBlur = initialState.particleBlur ?? 1;
     this.positions = null;
+    this.renderPositions = null;
     this.velocities = null;
+    this.pathOffsets = null;
     this.seeds = null;
     this.geometry = null;
     this.points = null;
@@ -90,7 +93,9 @@ export class WebGLFallbackRenderer {
     }
 
     this.positions = new Float32Array(this.particleCount * 3);
+    this.renderPositions = new Float32Array(this.particleCount * 3);
     this.velocities = new Float32Array(this.particleCount * 2);
+    this.pathOffsets = new Float32Array(this.particleCount * 2);
     this.seeds = new Float32Array(this.particleCount);
     const colors = new Float32Array(this.particleCount * 3);
 
@@ -100,18 +105,24 @@ export class WebGLFallbackRenderer {
       const x = seeded(index * 7 + 11 + this.seedBase) * 2 - 1;
       const y = seeded(index * 13 + 19 + this.seedBase) * 2 - 1;
       const tone = 0.82 + seeded(index * 17 + 3 + this.seedBase) * 0.16;
+      const offsetAngle = seeded(index * 23 + 1201 + this.seedBase) * Math.PI * 2;
+      const offsetRadius = seeded(index * 29 + 1601 + this.seedBase);
 
       this.positions[offset3] = x * PLATE_HALF * 0.96;
       this.positions[offset3 + 1] = y * PLATE_HALF * 0.96;
       this.positions[offset3 + 2] = 0;
+      this.pathOffsets[index * 2] = Math.cos(offsetAngle) * offsetRadius;
+      this.pathOffsets[index * 2 + 1] = Math.sin(offsetAngle) * offsetRadius;
       this.seeds[index] = seed;
       colors[offset3] = tone;
       colors[offset3 + 1] = tone * 0.985;
       colors[offset3 + 2] = tone * 0.91;
     }
 
+    this.updateRenderPositions();
+
     this.geometry = new THREE.BufferGeometry();
-    this.geometry.setAttribute("position", new THREE.BufferAttribute(this.positions, 3));
+    this.geometry.setAttribute("position", new THREE.BufferAttribute(this.renderPositions, 3));
     this.geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 
     const material = new THREE.PointsMaterial({
@@ -137,6 +148,12 @@ export class WebGLFallbackRenderer {
   setParticleSize(nextSize) {
     this.particleSize = nextSize;
     this.applyParticleMaterialSettings();
+  }
+
+  setParticleOffset(nextOffset) {
+    this.particleOffset = clampNonNegative(nextOffset);
+    this.updateRenderPositions();
+    this.geometry.attributes.position.needsUpdate = true;
   }
 
   setParticleBlur(nextBlur) {
@@ -219,6 +236,7 @@ export class WebGLFallbackRenderer {
       this.positions[offset3 + 1] = nextY;
     }
 
+    this.updateRenderPositions();
     this.geometry.attributes.position.needsUpdate = true;
   }
 
@@ -258,6 +276,19 @@ export class WebGLFallbackRenderer {
     }
 
     material.needsUpdate = true;
+  }
+
+  updateRenderPositions() {
+    if (!this.positions || !this.renderPositions || !this.pathOffsets) return;
+
+    const offset = this.particleOffset;
+    for (let index = 0; index < this.particleCount; index += 1) {
+      const offset3 = index * 3;
+      const offset2 = index * 2;
+      this.renderPositions[offset3] = this.positions[offset3] + this.pathOffsets[offset2] * offset;
+      this.renderPositions[offset3 + 1] = this.positions[offset3 + 1] + this.pathOffsets[offset2 + 1] * offset;
+      this.renderPositions[offset3 + 2] = this.positions[offset3 + 2];
+    }
   }
 }
 
@@ -315,6 +346,11 @@ function toWebGLPointSize(size) {
 
 function clamp01(value) {
   return Math.min(1, Math.max(0, Number(value)));
+}
+
+function clampNonNegative(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(0, number) : 0;
 }
 
 function mixNumber(a, b, t) {

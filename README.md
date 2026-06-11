@@ -9,7 +9,7 @@
 - Real-time frequency dial from 345 Hz to 5907 Hz.
 - Reference frequency preset buttons for the visible Chladni modes.
 - Per-renderer particle-count slider: 5k to 500k in WebGPU and 5k to 50k in WebGL2.
-- Particle speed, size, and blur controls for live motion and material tuning.
+- Particle speed, size, offset, and blur controls for live motion and material tuning.
 - Sand reset control for restarting the particle distribution.
 - In-app WebGPU/WebGL fallback switch.
 - Muted-by-default Web Audio tone that follows the exact dial frequency.
@@ -37,7 +37,7 @@ npm run build
 - Drag the circular dial to change frequency and morph the sand pattern.
 - Click a preset Hz button to jump to a reference Chladni mode.
 - Use the particle slider to rebuild the simulation; WebGPU and WebGL2 remember separate particle counts.
-- Use `Speed` to change particle motion rate, `Size` to scale particle diameter, and `Blur` to blend from crisp particles to soft sand sprites.
+- Use `Speed` to change particle motion rate, `Size` to scale particle diameter, `Offset` to add per-particle path spread, and `Blur` to blend from crisp particles to soft sand sprites.
 - Click `Reset Sand` to restart the particle distribution.
 - Click `Use WebGL2` or `Use WebGPU` to switch renderer mode.
 - Click the tone button to unmute or mute the exact-Hz oscillator.

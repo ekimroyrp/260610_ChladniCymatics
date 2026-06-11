@@ -17,6 +17,7 @@ import {
   time,
   uniform,
   uv,
+  vec2,
   vec3,
   vec4
 } from "three/tsl";
@@ -57,6 +58,7 @@ export class WebGPUChladniRenderer {
     this.modeBlend = uniform(0);
     this.particleSpeed = uniform(initialState.particleSpeed ?? 1);
     this.particleSize = uniform(initialState.particleSize ?? PARTICLE_BASE_SIZE);
+    this.particleOffset = uniform(initialState.particleOffset ?? 0);
     this.particleBlur = uniform(initialState.particleBlur ?? 1);
     this.particleOpacity = uniform(getParticleOpacityForSettings(this.particleCount, this.particleSize.value, this.particleBlur.value));
     this.attraction = uniform(0.0022);
@@ -133,6 +135,7 @@ export class WebGPUChladniRenderer {
     const velocities = instancedArray(this.particleCount, "vec3");
     const colors = instancedArray(this.particleCount, "vec3");
     const sizes = instancedArray(this.particleCount, "float");
+    const offsets = instancedArray(this.particleCount, "vec2");
     const seeds = instancedArray(this.particleCount, "float");
 
     this.computeInit = Fn(() => {
@@ -140,16 +143,20 @@ export class WebGPUChladniRenderer {
       const velocity = velocities.element(instanceIndex);
       const color = colors.element(instanceIndex);
       const size = sizes.element(instanceIndex);
+      const offset = offsets.element(instanceIndex);
       const seed = seeds.element(instanceIndex);
 
       const sx = hash(instanceIndex).mul(2).sub(1);
       const sy = hash(instanceIndex.add(193)).mul(2).sub(1);
       const tone = hash(instanceIndex.add(613)).mul(0.16).add(0.84);
+      const offsetAngle = hash(instanceIndex.add(1201)).mul(float(Math.PI * 2));
+      const offsetRadius = hash(instanceIndex.add(1601));
 
       position.assign(vec3(sx.mul(PLATE_HALF * 0.96), sy.mul(PLATE_HALF * 0.96), 0));
       velocity.assign(vec3(0, 0, 0));
       color.assign(vec3(tone, tone.mul(0.985), tone.mul(0.91)));
       size.assign(hash(instanceIndex.add(997)).mul(0.55).add(0.68));
+      offset.assign(vec2(cos(offsetAngle).mul(offsetRadius), sin(offsetAngle).mul(offsetRadius)));
       seed.assign(hash(instanceIndex.add(313)));
     })().compute(this.particleCount, [WORKGROUP_SIZE]).setName("Initialize Chladni Sand");
 
@@ -203,7 +210,8 @@ export class WebGPUChladniRenderer {
       colors.element(instanceIndex).mul(uv().y.mul(0.18).add(0.88)),
       this.particleOpacity
     );
-    material.positionNode = positions.toAttribute();
+    const renderOffset = offsets.element(instanceIndex).mul(this.particleOffset);
+    material.positionNode = positions.toAttribute().add(vec3(renderOffset.x, renderOffset.y, 0));
     material.scaleNode = sizes.element(instanceIndex).mul(this.particleSize);
     material.opacityNode = mix(shapeCircle(), softParticleMask(), easedBlurNode(this.particleBlur));
 
@@ -238,6 +246,10 @@ export class WebGPUChladniRenderer {
   setParticleSize(nextSize) {
     this.particleSize.value = nextSize;
     this.updateParticleOpacity();
+  }
+
+  setParticleOffset(nextOffset) {
+    this.particleOffset.value = clampNonNegative(nextOffset);
   }
 
   setParticleBlur(nextBlur) {
@@ -323,6 +335,11 @@ function getParticleBlending(particleBlur) {
 
 function clamp01(value) {
   return Math.min(1, Math.max(0, Number(value)));
+}
+
+function clampNonNegative(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(0, number) : 0;
 }
 
 function mixNumber(a, b, t) {

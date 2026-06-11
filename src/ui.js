@@ -7,6 +7,8 @@ const MIN_PARTICLE_SPEED = 0.1;
 const MAX_PARTICLE_SPEED = 3;
 const MIN_PARTICLE_SIZE = 0.004;
 const MAX_PARTICLE_SIZE = 0.05;
+const MIN_PARTICLE_OFFSET = 0;
+const MAX_PARTICLE_OFFSET = 0.2;
 const MIN_PARTICLE_BLUR = 0;
 const MAX_PARTICLE_BLUR = 1;
 const DIAL_START_DEGREES = 140;
@@ -62,6 +64,13 @@ export function createInterface(root, initialState, handlers) {
         </div>
         <div class="range-control">
           <div class="control-row">
+            <label for="particle-offset">Offset</label>
+            <output id="particle-offset-output">${formatParticleOffset(initialState.particleOffset)}</output>
+          </div>
+          <input id="particle-offset" class="control-slider" type="range" min="${MIN_PARTICLE_OFFSET}" max="${MAX_PARTICLE_OFFSET}" step="0.005" value="${initialState.particleOffset}" />
+        </div>
+        <div class="range-control">
+          <div class="control-row">
             <label for="particle-blur">Blur</label>
             <output id="particle-blur-output">${formatParticleBlur(initialState.particleBlur)}</output>
           </div>
@@ -91,6 +100,8 @@ export function createInterface(root, initialState, handlers) {
   const speedOutput = root.querySelector("#particle-speed-output");
   const sizeSlider = root.querySelector("#particle-size");
   const sizeOutput = root.querySelector("#particle-size-output");
+  const offsetSlider = root.querySelector("#particle-offset");
+  const offsetOutput = root.querySelector("#particle-offset-output");
   const blurSlider = root.querySelector("#particle-blur");
   const blurOutput = root.querySelector("#particle-blur-output");
   const presetStrip = root.querySelector("#preset-strip");
@@ -171,6 +182,12 @@ export function createInterface(root, initialState, handlers) {
     const size = Number(sizeSlider.value);
     sizeOutput.textContent = formatParticleSize(size);
     handlers.onParticleSizeChange(size);
+  });
+
+  offsetSlider.addEventListener("input", () => {
+    const offset = Number(offsetSlider.value);
+    offsetOutput.textContent = formatParticleOffset(offset);
+    handlers.onParticleOffsetChange(offset);
   });
 
   blurSlider.addEventListener("input", () => {
@@ -275,6 +292,10 @@ export function createInterface(root, initialState, handlers) {
       sizeSlider.value = size;
       sizeOutput.textContent = formatParticleSize(size);
     },
+    updateParticleOffset: (offset) => {
+      offsetSlider.value = offset;
+      offsetOutput.textContent = formatParticleOffset(offset);
+    },
     updateParticleBlur: (blur) => {
       blurSlider.value = blur;
       blurOutput.textContent = formatParticleBlur(blur);
@@ -293,6 +314,7 @@ export function createInterface(root, initialState, handlers) {
     particleSlider.disabled = isBusy;
     speedSlider.disabled = isBusy;
     sizeSlider.disabled = isBusy;
+    offsetSlider.disabled = isBusy;
     blurSlider.disabled = isBusy;
     resetSandButton.disabled = isBusy;
     rendererToggle.disabled = isBusy;
@@ -380,6 +402,10 @@ function formatParticleSpeed(value) {
 }
 
 function formatParticleSize(value) {
+  return Number(value).toFixed(3);
+}
+
+function formatParticleOffset(value) {
   return Number(value).toFixed(3);
 }
 
